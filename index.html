@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Canvas Game</title>
+	<style>
+		canvas {
+			border: 1px solid;
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+		}
+	</style>
+</head>
+<body>
+	<script>
+		// Initate canvas
+		var canvas = document.createElement("canvas");
+		canvas.setAttribute("width", "640");
+		canvas.setAttribute("height", "480");
+		var c = canvas.getContext("2d");
+		document.body.appendChild(canvas);
+
+		// Real code goes here ------------------------- ************************** ----------------------------------------
+
+		// init global vars
+		var DIR, EATEN, foodX, foodY, scoreB = 0, DIE, frame = 0, rate = 0, gamePaused;
+
+		// init sprites
+		var s_player = new Image();
+			s_player.src = "../canvasgame/sprites/skateboarder.png";
+
+		var s_obstacle = new Image();
+			s_obstacle.src = "../canvasgame/sprites/tree_01.png";
+
+		var s_food = new Image();
+			s_food.src = "../canvasgame/sprites/Food.png";
+
+		// init sounds
+		var so_foodEaten = new Audio("../canvasgame/sound/foodeat.wav");
+
+		// Player object body for option changes
+		var playerObj = {
+			x: canvas.width / 2 - 10,
+			y: canvas.height / 2 - 10,
+			wh: 25,
+			playerSpd: 2.5,
+		}
+
+		// Add value to control DIR variable and pause keydown P
+		document.addEventListener('keydown', function(e) {
+			if (e.keyCode == 80) {
+				// Pause game
+				if (gamePaused == false) {
+					gamePaused = true;
+				} else {
+					gamePaused = false;
+				}
+			}
+
+			if (gamePaused == false) {
+				switch(e.keyCode) {
+					case 37: // left
+						DIR = 0;
+					break;
+					case 38: // up
+						DIR = 1;
+					break;
+					case 39: // right
+						DIR = 2;
+					break;
+					case 40: // down	
+						DIR = 3;
+					break;
+				}	
+			}
+		});
+
+		// Player constructor
+		var Player = function(x, y, wh, playerSpd) {
+			this.x = x;
+			this.y = y;
+			this.wh = wh;
+			this.speed = playerSpd;
+
+			this.draw = function() {
+				// increment the frames to animate
+				this.frame = 32 * rate;
+
+				// Hitbox draw
+				//c.fillStyle = "rgba(236, 240, 241, 0)";
+				//c.fillRect(this.x, this.y, wh, wh);
+
+				// controls
+				switch (DIR) {
+					case 0:
+						this.x -= this.speed;
+					break;
+					case 1:
+						this.y -= this.speed;
+					break;
+					case 2:
+						this.x += this.speed;
+					break;
+					case 3:
+						this.y += this.speed;
+					break;
+				}
+
+				// wrap screen
+				if ((this.x + this.wh) < 10) {
+					this.x = canvas.width - 10;
+				} else if (this.x > canvas.width - 10) {
+					this.x = -this.wh + 10;
+				} else if ((this.y + this.wh) < 10) {
+					this.y = canvas.height - 10;
+				} else if (this.y > canvas.height - 10) {
+					this.y = -this.wh + 10;
+				}
+
+				// check if collision with food and alter scores, etc
+				if ((this.x + this.wh) > foodX && this.y < (foodY + this.wh) && (this.y + this.wh) > foodY && this.x < (foodX + this.wh)) {
+					EATEN = 0;	
+					so_foodEaten.play();
+					scoreB += (100 * Math.floor(this.speed));
+					this.speed += 0.05;
+				}
+
+				// update player obj x and y
+				playerObj.x = this.x;
+				playerObj.y = this.y;
+
+				// draw player sprite and rotate when necessary
+				c.save();
+				c.translate(this.x, this.y)
+				switch(DIR) {
+					case 0: // left
+						c.rotate(90 * Math.PI / 180);
+						c.drawImage(s_player, this.frame, 0, 32, 32, 0, -this.wh, this.wh, this.wh);	
+					break;
+					case 1: // up
+						c.rotate(180 * Math.PI / 180);
+						c.drawImage(s_player, this.frame, 0, 32, 32, -this.wh, -this.wh, this.wh, this.wh);
+					break;
+					case 2: // right
+						c.rotate(-90 * Math.PI / 180);
+						c.drawImage(s_player, this.frame, 0, 32, 32, -this.wh, 0, this.wh, this.wh);
+					break;
+					case 3: // down
+						c.rotate(0 * Math.PI / 180);
+						c.drawImage(s_player, this.frame, 0, 32, 32, 0, 0, this.wh, this.wh);
+					break;
+					default: // default
+						c.rotate(0 * Math.PI / 180);
+						c.drawImage(s_player, 0, 0, 32, 32, 0, 0, this.wh, this.wh);
+					break;
+				}
+				c.restore();
+			}
+
+			this.reset = function() {
+				this.x = canvas.width / 2 - 10;
+				this.y = canvas.height / 2 - 10;
+				this.speed = playerSpd;
+			}
+		}
+
+		// Obstacle constructor
+		var Obstacle = function(x, y, wh) {
+			this.x = x;
+			this.y = y;
+			this.wh = wh;
+
+			this.draw = function() {
+				// debug hitbox
+				//c.fillStyle = "rgba(231, 76, 60, 0)";
+				//c.fillRect(this.x, this.y, this.wh, this.wh);
+
+				// re-randomize pos if outside of world
+				if ((this.x + this.wh) > canvas.width || this.x < 0 || (this.y + this.wh) > canvas.height || this.y < 0) {
+					this.x = randomizer(canvas.width);
+					this.y = randomizer(canvas.height);
+				}
+
+				// check with collision of food and player
+				if ((this.x + this.wh) > foodX && this.y < (foodY + this.wh) && (this.y + this.wh) > foodY && this.x < (foodX + this.wh)) {
+					EATEN = 0;
+				} else if ((this.x + this.wh) > playerObj.x && this.y < (playerObj.y + this.wh) && (this.y + this.wh) > playerObj.y && this.x < (playerObj.x + this.wh)) {
+					DIE = true;
+				}
+
+				// draw sprite
+				c.drawImage(s_obstacle, 0, 0, 64, 64, this.x, this.y, this.wh, this.wh);
+			}
+
+			this.reset = function() {
+				this.x = randomizer(canvas.width);
+				this.y = randomizer(canvas.height);
+			}
+ 		}
+
+		// draw food
+		function createFood() {
+			c.fillStyle = "rgba(46, 204, 113, 0)";
+
+			// re-randomize food if hit's player
+			if ((foodX + playerObj.wh) > canvas.width || foodX < 0 || (foodY + playerObj.wh) > canvas.height || foodY < 0) {
+				randomizeFoodPos();
+			}
+
+			c.fillRect(foodX, foodY, playerObj.wh, playerObj.wh);
+
+			// draw food sprite from spritesheet
+			c.drawImage(s_food, 0, 16 * 4, 16, 16, foodX, foodY, playerObj.wh, playerObj.wh);
+		}
+ 
+		// initate objects
+		var player1 = new Player(playerObj.x, playerObj.y, playerObj.wh, playerObj.playerSpd);
+		var enemyHolder = [];
+
+		function init() {
+			// push enemies to object
+			for (var i = 0; i < 17; i++) {
+				enemyHolder.push(new Obstacle(randomizer(canvas.width), randomizer(canvas.height), playerObj.wh, playerObj.wh));
+			}
+
+			gamePaused = false;
+			DIE = false;
+			EATEN = 0;
+			update();
+		}
+
+		function draw() {
+			// set animation speed
+			if (frame % 12 == 0) {
+				if (rate > 4) {
+					rate = 0;
+				}
+				rate++;
+			}
+
+			// increment frame
+			frame++;
+
+			// Check if food eaten, then set food to new location
+			if (EATEN == 1) {
+				createFood();	
+			} else if (EATEN == 0) {
+				randomizeFoodPos();
+				EATEN = 1;
+			}
+
+			// call draw methods
+			player1.draw();
+			for(var i = 0; i < enemyHolder.length; i++) {
+				enemyHolder[i].draw();
+			}
+
+			// check enemy self-collsion
+			for (var i = 0; i < enemyHolder.length; i++) {
+				for (var p = 0; p < enemyHolder.length; p++) {
+					// don't check itself
+					if (i == p) {
+						continue;
+					}
+
+					// restart game if colliding
+					if ((enemyHolder[i].x + enemyHolder[i].wh) > enemyHolder[p].x && enemyHolder[i].y < (enemyHolder[p].y + enemyHolder[p].wh) && (enemyHolder[i].y + enemyHolder[i].wh) > enemyHolder[p].y && enemyHolder[i].x < (enemyHolder[p].x + enemyHolder[p].wh)) {
+						DIE = true;
+					}
+				}
+			}	
+
+			// reset game if dead
+			if (DIE == true) {
+				player1.reset();
+				for (var i = 0; i < enemyHolder.length; i++) {
+					enemyHolder[i].reset();
+				}
+				randomizeFoodPos();
+				scoreB = 0;
+				DIR = null;
+				DIE = false;
+			}
+
+			// scoreboard
+			c.textAlign = "start";
+			c.fillStyle = "#fff";
+			c.font = "900 10px sans-serif";
+			c.fillText("Score: " + scoreB, 10, 20);
+		}
+
+		function update() {
+			window.requestAnimationFrame(update);
+			c.clearRect(0, 0, canvas.width, canvas.height);
+			// background
+			c.fillStyle = "#282B2A";
+			c.fillRect(0, 0, canvas.width, canvas.height);
+			if (gamePaused == true) {
+				c.fillStyle = "#fff";
+				c.textAlign = "center";
+				c.fillText("GAME PAUSED", canvas.width / 2, canvas.height / 2);
+				c.fillText("PRESS \"P\" TO UNPAUSE", canvas.width / 2, canvas.height / 2 + 20);
+				return;
+			} else {
+				draw();	
+			}
+		}
+		
+		init();
+
+		function randomizeFoodPos() {
+			foodX = randomizer(canvas.width);
+			foodY = randomizer(canvas.height);
+		}
+
+		function randomizer(to) {
+			return Math.round(Math.random() * to);
+		}
+	</script>
+</body>
+</html>
