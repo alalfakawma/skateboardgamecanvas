@@ -1,3 +1,4 @@
+<!-- Javascript canvas game -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,16 +30,16 @@
 
 		// init sprites
 		var s_player = new Image();
-			s_player.src = "../canvasgame/sprites/skateboarder.png";
+			s_player.src = "../skateboardgamecanvas/sprites/skateboarder.png";
 
 		var s_obstacle = new Image();
-			s_obstacle.src = "../canvasgame/sprites/tree_01.png";
+			s_obstacle.src = "../skateboardgamecanvas/sprites/tree_01.png";
 
 		var s_food = new Image();
-			s_food.src = "../canvasgame/sprites/Food.png";
+			s_food.src = "../skateboardgamecanvas/sprites/Food.png";
 
 		// init sounds
-		var so_foodEaten = new Audio("../canvasgame/sound/foodeat.wav");
+		var so_foodEaten = new Audio("../skateboardgamecanvas/sound/foodeat.wav");
 
 		// Player object body for option changes
 		var playerObj = {
@@ -191,7 +192,7 @@
 				}
 
 				// draw sprite
-				c.drawImage(s_obstacle, 0, 0, 64, 64, this.x, this.y, this.wh, this.wh);
+				c.drawImage(s_obstacle, 0, 0, 64, 64, this.x, this.y, this.wh, this.wh);		
 			}
 
 			this.reset = function() {
@@ -212,7 +213,7 @@
 			c.fillRect(foodX, foodY, playerObj.wh, playerObj.wh);
 
 			// draw food sprite from spritesheet
-			c.drawImage(s_food, 0, 16 * 4, 16, 16, foodX, foodY, playerObj.wh, playerObj.wh);
+			c.drawImage(s_food, 0, 16 * 4, 16, 16, foodX, foodY, playerObj.wh, playerObj.wh);	
 		}
  
 		// initate objects
@@ -294,8 +295,8 @@
 		function update() {
 			window.requestAnimationFrame(update);
 			c.clearRect(0, 0, canvas.width, canvas.height);
-			// background
-			c.fillStyle = "#282B2A";
+			// background color
+			c.fillStyle = "#333";
 			c.fillRect(0, 0, canvas.width, canvas.height);
 			if (gamePaused == true) {
 				c.fillStyle = "#fff";
@@ -304,7 +305,7 @@
 				c.fillText("PRESS \"P\" TO UNPAUSE", canvas.width / 2, canvas.height / 2 + 20);
 				return;
 			} else {
-				draw();	
+				draw();
 			}
 		}
 		
